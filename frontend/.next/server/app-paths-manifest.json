@@ -1,0 +1,5 @@
+{
+  "/timer/page": "app/timer/page.js",
+  "/jury/page": "app/jury/page.js",
+  "/bracket/page": "app/bracket/page.js"
+}
