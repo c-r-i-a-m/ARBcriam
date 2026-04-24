@@ -32,7 +32,6 @@ export function useWebSocket(onMessage: Handler) {
 
     socket.onerror = () => socket.close();
 
-    // Ping every 25s
     const ping = setInterval(() => {
       if (socket.readyState === WebSocket.OPEN) socket.send("ping");
     }, 25000);

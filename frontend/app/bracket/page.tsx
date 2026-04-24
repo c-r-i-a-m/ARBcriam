@@ -5,16 +5,13 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import type { Match, Team, WSMessage } from "@/types";
 import Link from "next/link";
 
-// ─── Layout constants ────────────────────────────────────────────────────────
 const CARD_W = 148;
 const CARD_H = 46;
-const H_GAP  = 56;   // horizontal gap between rounds
-const V_GAP  = 16;   // vertical gap between cards in same round
+const H_GAP = 56;
+const V_GAP = 16;
 
-// Round vertical spacings (how many V_GAPunits between slots)
-const ROUND_SLOTS = [4, 2, 1, 0]; // R16(8 matches), QF(4), SF(2), Final(1) per side
+const ROUND_SLOTS = [4, 2, 1, 0];
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
 function getRoundLabel(round: number) {
   return ["", "Round of 16", "Quarter-Finals", "Semi-Finals", "Final"][round] ?? `R${round}`;
 }
@@ -26,7 +23,6 @@ function getTeamBgClass(match: Match, teamId: number | null, activeMatchId: numb
   return "bg-panel border-panelBorder hover:border-purple-mid/40";
 }
 
-// ─── TeamCard ────────────────────────────────────────────────────────────────
 function TeamCard({
   team,
   match,
@@ -72,14 +68,12 @@ function TeamCard({
         }
       }}
     >
-      {/* Seed */}
       {team?.seed && (
         <span className="font-mono text-[9px] text-text-muted min-w-[16px] text-center">
           {String(team.seed).padStart(2, "0")}
         </span>
       )}
 
-      {/* Name */}
       <span className={`
         font-display text-[11px] font-semibold tracking-wider truncate flex-1
         ${isWinner ? "text-purple-bright" : ""}
@@ -90,12 +84,10 @@ function TeamCard({
         {team?.name ?? "TBD"}
       </span>
 
-      {/* Winner crown */}
       {isWinner && (
         <span className="text-accent-yellow text-[10px]">★</span>
       )}
 
-      {/* Active dot */}
       {isActive && !isWinner && !isLoser && team && (
         <span className="w-1.5 h-1.5 rounded-full bg-purple-vivid animate-pulse-slow shrink-0" />
       )}
@@ -103,7 +95,6 @@ function TeamCard({
   );
 }
 
-// ─── MatchNode ───────────────────────────────────────────────────────────────
 function MatchNode({
   match,
   activeMatchId,
@@ -130,7 +121,6 @@ function MatchNode({
         ${isFinal ? "scale-110" : ""}
       `}
     >
-      {/* Match round badge */}
       <div
         className={`
           absolute -top-5 left-0 right-0 text-center font-mono text-[8px] tracking-widest
@@ -150,7 +140,6 @@ function MatchNode({
         onDrop={onDrop}
       />
 
-      {/* VS divider */}
       <div className="flex items-center gap-1 px-3">
         <div className="flex-1 h-px bg-panelBorder/60" />
         <span className="font-mono text-[8px] text-text-dim tracking-widest">VS</span>
@@ -166,7 +155,6 @@ function MatchNode({
         onDrop={onDrop}
       />
 
-      {/* Set as active button */}
       {!isActive && match.team1_id && match.team2_id && match.status !== "completed" && (
         <button
           onClick={() => onSetActive(match.id)}
@@ -179,7 +167,6 @@ function MatchNode({
   );
 }
 
-// ─── SVG Connectors ──────────────────────────────────────────────────────────
 function BracketConnectors({
   matchPositions,
   matches,
@@ -196,7 +183,7 @@ function BracketConnectors({
     if (!from || !to) return;
 
     const fromX = from.x + CARD_W;
-    const fromY = from.y + (CARD_H * 2 + 3 + 14) / 2; // mid of match node
+    const fromY = from.y + (CARD_H * 2 + 3 + 14) / 2;
     const toX   = to.x;
     const toY   = to.y + (CARD_H * 2 + 3 + 14) / 2;
 
@@ -215,14 +202,13 @@ function BracketConnectors({
     );
   });
 
-  // Right side connectors (mirrored - coming from right)
   matches.filter(m => m.side === "right").forEach((match) => {
     if (!match.next_match_id) return;
     const from = matchPositions.get(match.id);
     const to   = matchPositions.get(match.next_match_id);
     if (!from || !to) return;
 
-    const fromX = from.x; // left edge (since right side cards face inward)
+    const fromX = from.x;
     const fromY = from.y + (CARD_H * 2 + 3 + 14) / 2;
     const toX   = to.x + CARD_W;
     const toY   = to.y + (CARD_H * 2 + 3 + 14) / 2;
@@ -245,7 +231,6 @@ function BracketConnectors({
   return <>{lines}</>;
 }
 
-// ─── Main Bracket Page ───────────────────────────────────────────────────────
 export default function BracketPage() {
   const [matches, setMatches]       = useState<Match[]>([]);
   const [teams, setTeams]           = useState<Team[]>([]);
@@ -316,13 +301,7 @@ export default function BracketPage() {
     } catch (e) { console.error(e); }
   }, [dragInfo, loadData]);
 
-  // ── Layout computation ────────────────────────────────────────────────────
-  // Left side: R16 slots 0-3, QF 0-1, SF 0, Final 0
-  // Right side: R16 slots 4-7, QF 2-3, SF 1
-  const MATCH_NODE_H = CARD_H * 2 + 3 + 14; // two cards + VS divider + label
-
-  // We place matches in a canvas. Compute y-positions per round per side.
-  // Left QF spacing = (R16 slot spacing * 2), etc.
+  const MATCH_NODE_H = CARD_H * 2 + 3 + 14;
   const leftR16  = matches.filter(m => m.round === 1 && m.side === "left").sort((a, b) => a.slot_index - b.slot_index);
   const leftQF   = matches.filter(m => m.round === 2 && m.side === "left").sort((a, b) => a.slot_index - b.slot_index);
   const leftSF   = matches.filter(m => m.round === 3 && m.side === "left");
@@ -331,12 +310,8 @@ export default function BracketPage() {
   const rightSF  = matches.filter(m => m.round === 3 && m.side === "right");
   const final    = matches.find(m => m.round === 4);
 
-  // Vertical pitch at R16: each match takes MATCH_NODE_H + V_GAP
   const R16_PITCH = MATCH_NODE_H + 28;
-  // Total left height = 4 * R16_PITCH
   const totalH = 4 * R16_PITCH + 60;
-  // QF pitch = 2 * R16_PITCH
-  // SF pitch = 4 * R16_PITCH
 
   const leftR16Y  = leftR16.map((_, i) => 30 + i * R16_PITCH);
   const leftQFY   = leftQF.map((_, i) => 30 + R16_PITCH / 2 + i * R16_PITCH * 2);
@@ -346,7 +321,6 @@ export default function BracketPage() {
   const rightSFY  = [(totalH - MATCH_NODE_H) / 2];
   const finalY    = (totalH - MATCH_NODE_H) / 2;
 
-  // X positions
   const PADDING = 40;
   const leftR16X  = PADDING;
   const leftQFX   = PADDING + CARD_W + H_GAP;
@@ -376,7 +350,6 @@ export default function BracketPage() {
 
   return (
     <div className="min-h-screen grid-bg flex flex-col">
-      {/* Header */}
       <header className="flex items-center justify-between px-8 py-4 border-b border-panelBorder/60 glass-panel sticky top-0 z-20">
         <Link href="/" className="font-display text-xl font-black tracking-wider text-text-primary hover:text-purple-vivid transition-colors">
           A.R.B
@@ -392,7 +365,16 @@ export default function BracketPage() {
         </div>
       </header>
 
-      {/* Round labels */}
+      <div className="border-b border-panelBorder/50 bg-panel/35 px-8 py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 font-mono text-[10px] tracking-[0.22em] text-text-secondary">
+          <span className="rounded-full border border-panelBorder/70 px-3 py-1">HIT THE WALL = +2s</span>
+          <span className="rounded-full border border-panelBorder/70 px-3 py-1">INTERVENTION = +5s</span>
+          <span className="rounded-full border border-accent-red/35 bg-accent-red/10 px-3 py-1 text-accent-red">
+            4 INTERVENTIONS = ELIMINATION
+          </span>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between px-[40px] pt-5 pb-2" style={{ width: totalW, minWidth: totalW }}>
         {[
           { x: leftR16X + CARD_W/2, label: "ROUND OF 16" },
@@ -409,10 +391,8 @@ export default function BracketPage() {
         ))}
       </div>
 
-      {/* Bracket canvas */}
       <div className="overflow-auto flex-1 pb-12 relative">
         <div style={{ width: totalW, height: totalH + 80, position: "relative", margin: "0 auto" }}>
-          {/* SVG connector lines */}
           <svg
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
             viewBox={`0 0 ${totalW} ${totalH + 80}`}
@@ -424,7 +404,6 @@ export default function BracketPage() {
                 <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
             </defs>
-            {/* Left side connectors */}
             {[...leftR16, ...leftQF, ...leftSF].map((match) => {
               if (!match.next_match_id) return null;
               const from = matchPositions.get(match.id);
@@ -447,7 +426,6 @@ export default function BracketPage() {
                 />
               );
             })}
-            {/* Right side connectors (mirrored) */}
             {[...rightR16, ...rightQF, ...rightSF].map((match) => {
               if (!match.next_match_id) return null;
               const from = matchPositions.get(match.id);
@@ -472,7 +450,6 @@ export default function BracketPage() {
             })}
           </svg>
 
-          {/* Match nodes */}
           {matches.map((match) => {
             const pos = matchPositions.get(match.id);
             if (!pos) return null;
@@ -482,7 +459,6 @@ export default function BracketPage() {
                 key={match.id}
                 style={{ position: "absolute", left: pos.x, top: pos.y, zIndex: isFinal ? 10 : 1 }}
               >
-                {/* Final glow ring */}
                 {isFinal && (
                   <div
                     className="absolute -inset-3 rounded-xl pointer-events-none"
@@ -502,7 +478,6 @@ export default function BracketPage() {
                   onSetActive={handleSetActive}
                   isFinal={isFinal}
                 />
-                {/* Champion display */}
                 {isFinal && match.winner && (
                   <div className="absolute -bottom-12 left-0 right-0 text-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-dim/80 border border-purple-soft/60 shadow-glow-purple">
@@ -520,7 +495,6 @@ export default function BracketPage() {
         </div>
       </div>
 
-      {/* Winner confirmation modal */}
       {winnerModal && (() => {
         const match = matches.find(m => m.id === winnerModal.matchId);
         const team  = match?.team1?.id === winnerModal.teamId ? match.team1 : match?.team2;

@@ -15,7 +15,7 @@ const NAV_ITEMS = [
     label: "MATCH CONTROL",
     sub: "Live Duel Interface",
     icon: "◉",
-    desc: "Match clock, penalty tracking, and per-team time recording",
+    desc: "Live chrono with hit-the-wall (+2s), intervention (+5s), and elimination tracking",
     accent: "cyan",
   },
   {
@@ -23,7 +23,7 @@ const NAV_ITEMS = [
     label: "JURY",
     sub: "Mobile Control Panel",
     icon: "◈",
-    desc: "Simplified phone interface for penalties and team time records",
+    desc: "Phone-ready controls for wall hits, interventions, time records, and eliminations",
     accent: "orange",
   },
 ];
@@ -31,11 +31,9 @@ const NAV_ITEMS = [
 export default function Home() {
   return (
     <main className="relative min-h-screen grid-bg flex flex-col items-center justify-center px-6">
-      {/* Background radial */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(39,24,126,0.10),transparent)]" />
 
       <div className="relative z-10 w-full max-w-4xl">
-        {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-mid/30 bg-purple-dim/20 text-purple-vivid font-mono text-xs mb-6 tracking-widest">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse-slow" />
@@ -47,9 +45,15 @@ export default function Home() {
           <p className="font-mono text-text-secondary text-sm tracking-[0.3em] uppercase">
             C.R.I.A.M
           </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 font-mono text-[10px] tracking-[0.22em] text-text-secondary">
+            <span className="rounded-full border border-panelBorder/60 px-3 py-1">HIT THE WALL = +2s</span>
+            <span className="rounded-full border border-panelBorder/60 px-3 py-1">INTERVENTION = +5s</span>
+            <span className="rounded-full border border-accent-red/35 bg-accent-red/10 px-3 py-1 text-accent-red">
+              4 INTERVENTIONS = ELIMINATION
+            </span>
+          </div>
         </div>
 
-        {/* Nav Cards */}
         <div className="grid md:grid-cols-3 gap-4">
           {NAV_ITEMS.map((item) => (
             <Link key={item.href} href={item.href}>
@@ -74,7 +78,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Footer */}
         <div className="text-center mt-12 text-text-muted font-mono text-xs tracking-wider">
           African Robotic Brains
         </div>

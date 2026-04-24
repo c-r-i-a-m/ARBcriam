@@ -8,7 +8,7 @@ export interface Team {
 
 export interface Match {
   id: number;
-  round: number;       // 1=R16, 2=QF, 3=SF, 4=Final
+  round: number;
   slot_index: number;
   side: "left" | "right" | "center" | null;
   team1_id: number | null;
@@ -34,10 +34,23 @@ export interface TimerState {
   updated_at: string;
 }
 
+export type PenaltyType = "hit_the_wall" | "intervention";
+
+export interface TeamPenaltySummary {
+  hit_the_wall_count: number;
+  intervention_count: number;
+  hit_the_wall_seconds: number;
+  intervention_seconds: number;
+  legacy_seconds: number;
+  total_seconds: number;
+  eliminated: boolean;
+}
+
 export interface PenaltyEvent {
   id: number;
   match_id: number;
   team_id: number;
+  penalty_type: PenaltyType | "legacy";
   penalty_value: number;
   created_at: string;
   source: string;
@@ -69,7 +82,7 @@ export interface TournamentState {
   active_match_id: number | null;
   current_round: number;
   timer: TimerState | null;
-  penalties: Record<number, number>;
+  penalties: Record<number, TeamPenaltySummary>;
   records: Record<number, RecordEvent[]>;
   teams: Team[];
   matches: Match[];
@@ -79,11 +92,23 @@ export type WSMessage =
   | { type: "pong" }
   | { type: "bracket_updated"; match_id: number; round: number; slot_index: number }
   | { type: "winner_selected"; match_id: number; winner_id: number; next_match_id: number | null }
-  | { type: "active_match_changed"; match_id: number; round: number }
+  | { type: "active_match_changed"; match_id: number | null; round: number | null }
   | { type: "timer_started"; match_id: number; accumulated_elapsed_ms: number; started_at: string }
   | { type: "timer_stopped"; match_id: number; accumulated_elapsed_ms: number }
   | { type: "timer_reset"; match_id: number }
-  | { type: "penalty_added"; match_id: number; team_id: number; total_penalties: number; penalty_id: number; source: string }
+  | {
+      type: "penalty_added";
+      match_id: number;
+      team_id: number;
+      penalty_type: PenaltyType;
+      penalty_value: number;
+      penalty_summary: TeamPenaltySummary;
+      total_penalties: number;
+      penalty_id: number;
+      source: string;
+      eliminated: boolean;
+      auto_winner_id: number | null;
+    }
   | { type: "time_recorded"; match_id: number; team_id: number; elapsed_ms: number; record_id: number; label: string | null; source: string }
   | { type: "tournament_reset" }
   | { type: "bracket_initialized" };

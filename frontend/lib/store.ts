@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Match, Team, TimerState, RecordEvent } from "@/types";
+import type { Match, Team, RecordEvent, TeamPenaltySummary } from "@/types";
 
 interface TournamentStore {
   teams: Team[];
@@ -11,7 +11,7 @@ interface TournamentStore {
     accumulatedMs: number;
     startedAt: string | null;
   } | null;
-  penalties: Record<number, number>;
+  penalties: Record<number, TeamPenaltySummary>;
   records: Record<number, RecordEvent[]>;
 
   setFullState: (state: {
@@ -20,14 +20,14 @@ interface TournamentStore {
     activeMatchId: number | null;
     currentRound: number;
     timer: TournamentStore["timer"];
-    penalties: Record<number, number>;
+    penalties: Record<number, TeamPenaltySummary>;
     records: Record<number, RecordEvent[]>;
   }) => void;
 
   updateMatch: (matchId: number, updates: Partial<Match>) => void;
   setActiveMatch: (matchId: number | null) => void;
   setTimer: (timer: TournamentStore["timer"]) => void;
-  setPenalty: (teamId: number, total: number) => void;
+  setPenalty: (teamId: number, summary: TeamPenaltySummary) => void;
   addRecord: (teamId: number, record: RecordEvent) => void;
   getActiveMatch: () => Match | null;
 }
@@ -63,9 +63,9 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
 
   setTimer: (timer) => set({ timer }),
 
-  setPenalty: (teamId, total) =>
+  setPenalty: (teamId, summary) =>
     set((state) => ({
-      penalties: { ...state.penalties, [teamId]: total },
+      penalties: { ...state.penalties, [teamId]: summary },
     })),
 
   addRecord: (teamId, record) =>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
 interface TimerHookState {
   elapsedMs: number;
@@ -7,30 +7,27 @@ interface TimerHookState {
 }
 
 export function useTimer(
-  accumulatedMs: number,
-  isRunning: boolean,
-  startedAt: string | null
+  baseElapsedMs: number,
+  isRunning: boolean
 ): number {
-  const [elapsed, setElapsed] = useState(accumulatedMs);
+  const [elapsed, setElapsed] = useState(baseElapsedMs);
 
   useEffect(() => {
-    if (!isRunning || !startedAt) {
-      setElapsed(accumulatedMs);
+    if (!isRunning) {
+      setElapsed(baseElapsedMs);
       return;
     }
 
-    const startTime = new Date(startedAt + (startedAt.endsWith("Z") ? "" : "Z")).getTime();
+    const localStartMs = Date.now();
 
     const tick = () => {
-      const now = Date.now();
-      const delta = now - startTime;
-      setElapsed(accumulatedMs + delta);
+      setElapsed(baseElapsedMs + (Date.now() - localStartMs));
     };
 
     tick();
     const id = setInterval(tick, 50);
     return () => clearInterval(id);
-  }, [accumulatedMs, isRunning, startedAt]);
+  }, [baseElapsedMs, isRunning]);
 
   return elapsed;
 }
