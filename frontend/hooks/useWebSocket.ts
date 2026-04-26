@@ -1,54 +1,129 @@
 "use client";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { WS_URL } from "@/lib/api";
 import type { WSMessage } from "@/types";
 
 type Handler = (msg: WSMessage) => void;
 
+const CONNECT_DELAY_MS = 0;
+const RECONNECT_DELAY_MS = 2000;
+const PING_INTERVAL_MS = 25000;
+
 export function useWebSocket(onMessage: Handler) {
   const ws = useRef<WebSocket | null>(null);
+  const connectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mounted = useRef(true);
+  const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mounted = useRef(false);
+  const shouldReconnect = useRef(true);
   const handlerRef = useRef(onMessage);
   handlerRef.current = onMessage;
 
-  const connect = useCallback(() => {
-    if (!mounted.current) return;
-    const socket = new WebSocket(WS_URL);
-    ws.current = socket;
+  useEffect(() => {
+    mounted.current = true;
+    shouldReconnect.current = true;
 
-    socket.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data) as WSMessage;
-        handlerRef.current(msg);
-      } catch {}
+    const clearConnectTimer = () => {
+      if (!connectTimer.current) return;
+      clearTimeout(connectTimer.current);
+      connectTimer.current = null;
     };
 
-    socket.onclose = () => {
-      if (mounted.current) {
-        reconnectTimer.current = setTimeout(connect, 2000);
+    const clearReconnectTimer = () => {
+      if (!reconnectTimer.current) return;
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+    };
+
+    const clearPingTimer = () => {
+      if (!pingTimer.current) return;
+      clearInterval(pingTimer.current);
+      pingTimer.current = null;
+    };
+
+    const cleanupSocket = (socket: WebSocket | null) => {
+      if (!socket) return;
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      if (
+        socket.readyState === WebSocket.CONNECTING ||
+        socket.readyState === WebSocket.OPEN
+      ) {
+        socket.close();
       }
     };
 
-    socket.onerror = () => socket.close();
-
-    const ping = setInterval(() => {
-      if (socket.readyState === WebSocket.OPEN) socket.send("ping");
-    }, 25000);
-
-    socket.onclose = () => {
-      clearInterval(ping);
-      if (mounted.current) reconnectTimer.current = setTimeout(connect, 2000);
+    const scheduleReconnect = () => {
+      if (!mounted.current || !shouldReconnect.current || reconnectTimer.current) return;
+      reconnectTimer.current = setTimeout(() => {
+        reconnectTimer.current = null;
+        connect();
+      }, RECONNECT_DELAY_MS);
     };
-  }, []);
 
-  useEffect(() => {
-    mounted.current = true;
+    const connect = () => {
+      if (!mounted.current || !shouldReconnect.current || ws.current) return;
+
+      clearConnectTimer();
+      clearReconnectTimer();
+
+      connectTimer.current = setTimeout(() => {
+        connectTimer.current = null;
+        if (!mounted.current || !shouldReconnect.current || ws.current) return;
+
+        const socket = new WebSocket(WS_URL);
+        ws.current = socket;
+
+        socket.onopen = () => {
+          clearPingTimer();
+          pingTimer.current = setInterval(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send("ping");
+            }
+          }, PING_INTERVAL_MS);
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data) as WSMessage;
+            handlerRef.current(msg);
+          } catch {}
+        };
+
+        socket.onerror = () => {
+          if (
+            socket.readyState === WebSocket.CONNECTING ||
+            socket.readyState === WebSocket.OPEN
+          ) {
+            socket.close();
+          }
+        };
+
+        socket.onclose = () => {
+          if (ws.current === socket) {
+            ws.current = null;
+          }
+          clearPingTimer();
+          if (mounted.current && shouldReconnect.current) {
+            scheduleReconnect();
+          }
+        };
+      }, CONNECT_DELAY_MS);
+    };
+
     connect();
+
     return () => {
       mounted.current = false;
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      ws.current?.close();
+      shouldReconnect.current = false;
+      clearConnectTimer();
+      clearReconnectTimer();
+      clearPingTimer();
+      const socket = ws.current;
+      ws.current = null;
+      cleanupSocket(socket);
     };
-  }, [connect]);
+  }, []);
 }

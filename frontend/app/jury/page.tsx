@@ -47,21 +47,19 @@ function JuiceButton({
   const [pressed, setPressed] = useState(false);
 
   const styles = {
-    wall: "bg-accent-red/15 border-accent-red/50 text-accent-red active:bg-accent-red/30",
-    intervention:
-      "bg-orange-400/12 border-orange-400/45 text-orange-200 active:bg-orange-400/25",
-    record: "bg-purple-mid/15 border-purple-mid/60 text-purple-vivid active:bg-purple-mid/30",
-    muted: "bg-panel border-panelBorder text-text-muted",
+    wall: "bg-accent-red/12 border-accent-red/35 text-[#f0c7cf] active:bg-accent-red/18",
+    intervention: "bg-white/6 border-white/12 text-[#d9d6cf] active:bg-white/10",
+    record: "bg-white/8 border-white/15 text-[#f2efe6] active:bg-white/12",
+    muted: "bg-white/6 border-white/10 text-[#9fa3a7]",
   };
 
   return (
     <button
       onPointerDown={() => setPressed(true)}
-      onPointerUp={() => {
-        setPressed(false);
-        onClick();
-      }}
+      onPointerUp={() => setPressed(false)}
+      onClick={onClick}
       onPointerLeave={() => setPressed(false)}
+      onBlur={() => setPressed(false)}
       disabled={disabled}
       className={`
         min-h-[72px] w-full min-w-0 overflow-hidden rounded-lg border p-3
@@ -105,29 +103,29 @@ function TeamControlCard({
   const actionsDisabled = disabled || penaltySummary.eliminated;
 
   return (
-    <div className="min-w-0 flex flex-col gap-3 rounded-lg border border-panelBorder/60 bg-panel/80 p-3 sm:p-4 shadow-panel">
+    <div className="min-w-0 flex flex-col gap-3 rounded-[20px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-sm sm:p-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate font-display text-base font-bold tracking-wider text-text-primary">
+          <div className="truncate font-display text-base font-bold tracking-[0.16em] text-[#f3f0e8]">
             {team?.name ?? "TBD"}
           </div>
-          <div className="mt-1 font-mono text-[9px] tracking-[0.22em] text-text-muted">
+          <div className="mt-1 font-mono text-[9px] tracking-[0.22em] text-[#8f9499]">
             {getPenaltyBreakdown(penaltySummary)}
           </div>
         </div>
         {penaltySummary.eliminated && (
-          <span className="shrink-0 rounded-full border border-accent-red/45 bg-accent-red/12 px-2.5 py-1 font-mono text-[9px] tracking-[0.22em] text-accent-red">
+          <span className="shrink-0 rounded-full border border-accent-red/30 bg-accent-red/10 px-2.5 py-1 font-mono text-[9px] tracking-[0.22em] text-[#f0c7cf]">
             ELIMINATED
           </span>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-panelBorder/50 bg-void/35 px-3 py-3">
-          <div className="font-mono text-[9px] tracking-[0.22em] text-text-muted">TEAM RECORD</div>
+        <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3">
+          <div className="font-mono text-[9px] tracking-[0.22em] text-[#8f9499]">TEAM RECORD</div>
           <div
             className={`mt-2 font-display text-2xl font-black ${
-              penaltySummary.eliminated ? "text-accent-red" : "text-text-primary"
+              penaltySummary.eliminated ? "text-[#f0c7cf]" : "text-[#f3f0e8]"
             }`}
           >
             {penaltySummary.eliminated
@@ -136,43 +134,43 @@ function TeamControlCard({
                 ? formatTime(adjustedElapsedMs)
                 : "--:--.--"}
           </div>
-          <div className="mt-1 font-mono text-[9px] tracking-[0.18em] text-text-muted">
+          <div className="mt-1 font-mono text-[9px] tracking-[0.18em] text-[#8f9499]">
             RAW {latestRecord ? formatTime(latestRecord.recorded_elapsed_ms) : "--:--.--"}
           </div>
         </div>
-        <div className="rounded-lg border border-panelBorder/50 bg-void/35 px-3 py-3">
-          <div className="font-mono text-[9px] tracking-[0.22em] text-text-muted">PENALTY TIME</div>
+        <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3">
+          <div className="font-mono text-[9px] tracking-[0.22em] text-[#8f9499]">PENALTY TIME</div>
           <div
             className={`mt-2 font-display text-2xl font-black ${
-              penaltySummary.total_seconds > 0 ? "text-accent-red" : "text-text-dim"
+              penaltySummary.total_seconds > 0 ? "text-[#f0c7cf]" : "text-[#bcc0c4]"
             }`}
           >
             +{penaltySummary.total_seconds}s
           </div>
-          <div className="mt-1 font-mono text-[9px] tracking-[0.18em] text-text-muted">
+          <div className="mt-1 font-mono text-[9px] tracking-[0.18em] text-[#8f9499]">
             {penaltySummary.intervention_count}/4 interventions
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-panelBorder/50 bg-void/35 px-3 py-2">
-          <div className="font-mono text-[9px] tracking-[0.2em] text-text-muted">WALLS</div>
-          <div className="mt-1 font-display text-xl font-black text-text-primary">
+        <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
+          <div className="font-mono text-[9px] tracking-[0.2em] text-[#8f9499]">WALLS</div>
+          <div className="mt-1 font-display text-xl font-black text-[#f3f0e8]">
             {penaltySummary.hit_the_wall_count}
           </div>
-          <div className="font-mono text-[9px] text-text-muted">+{penaltySummary.hit_the_wall_seconds}s</div>
+          <div className="font-mono text-[9px] text-[#8f9499]">+{penaltySummary.hit_the_wall_seconds}s</div>
         </div>
-        <div className="rounded-lg border border-panelBorder/50 bg-void/35 px-3 py-2">
-          <div className="font-mono text-[9px] tracking-[0.2em] text-text-muted">INTERVENTIONS</div>
+        <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
+          <div className="font-mono text-[9px] tracking-[0.2em] text-[#8f9499]">INTERVENTIONS</div>
           <div
             className={`mt-1 font-display text-xl font-black ${
-              penaltySummary.intervention_count >= 3 ? "text-orange-200" : "text-text-primary"
+              penaltySummary.intervention_count >= 3 ? "text-[#e8d8c3]" : "text-[#f3f0e8]"
             }`}
           >
             {penaltySummary.intervention_count}
           </div>
-          <div className="font-mono text-[9px] text-text-muted">+{penaltySummary.intervention_seconds}s</div>
+          <div className="font-mono text-[9px] text-[#8f9499]">+{penaltySummary.intervention_seconds}s</div>
         </div>
       </div>
 
@@ -186,7 +184,7 @@ function TeamControlCard({
         />
         <JuiceButton
           label="+ INTERVENTION"
-          sublabel="+5S · 4TH = OUT"
+          sublabel="+5S - 4TH = OUT"
           variant="intervention"
           onClick={() => onPenalty("intervention")}
           disabled={!team || actionsDisabled}
@@ -277,6 +275,7 @@ export default function JuryPage() {
         break;
       case "timer_reset":
         setTimerData({ isRunning: false, baseElapsedMs: 0 });
+        loadState();
         break;
       case "penalty_added":
         setPenalties((prev) => ({ ...prev, [msg.team_id]: msg.penalty_summary }));
@@ -314,7 +313,7 @@ export default function JuryPage() {
       setBusy(true);
       try {
         await api.addPenalty(activeMatch.id, teamId, penaltyType, "jury");
-        trigger(`${getPenaltyTypeLabel(penaltyType).toUpperCase()} · ${teamName}`);
+        trigger(`${getPenaltyTypeLabel(penaltyType).toUpperCase()} - ${teamName}`);
       } finally {
         setBusy(false);
       }
@@ -343,66 +342,68 @@ export default function JuryPage() {
 
   return (
     <div
-      className="min-h-[100dvh] overflow-y-auto bg-void grid-bg"
+      className="min-h-[100dvh] overflow-y-auto"
       style={{
         WebkitUserSelect: "none",
         userSelect: "none",
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
+        background:
+          "radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 26%), linear-gradient(180deg, #111315 0%, #171a1d 48%, #101214 100%)",
       }}
     >
       {flash && (
         <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-          <div className="rounded-2xl bg-purple-mid/90 px-8 py-4 font-display text-xl font-black text-white shadow-glow-purple backdrop-blur-sm animate-[fadeIn_0.1s_ease]">
+          <div className="rounded-2xl border border-white/10 bg-[#23272b]/95 px-8 py-4 font-display text-xl font-black tracking-[0.18em] text-[#f3f0e8] shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm animate-[fadeIn_0.1s_ease]">
             {flash}
           </div>
         </div>
       )}
 
-      <div className="sticky top-0 z-30 grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-panelBorder/60 bg-panel/95 px-3 py-3 backdrop-blur-md sm:px-5">
-        <div className="font-display text-xs font-black tracking-widest text-purple-vivid sm:text-sm">A.R.B</div>
-        <div className="min-w-0 truncate text-center font-mono text-[10px] tracking-widest text-text-muted">
+      <div className="sticky top-0 z-30 grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-white/10 bg-[#171a1d]/92 px-3 py-3 backdrop-blur-md sm:px-5">
+        <div className="font-display text-xs font-black tracking-[0.24em] text-[#f3f0e8] sm:text-sm">A.R.B</div>
+        <div className="min-w-0 truncate text-center font-mono text-[10px] tracking-widest text-[#8f9499]">
           African Robotic Brains
         </div>
-        <div className="hidden items-center gap-1.5 font-mono text-[10px] text-accent-green sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+        <div className="hidden items-center gap-1.5 font-mono text-[10px] text-[#b9c2b5] sm:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#899584]" />
           READY
         </div>
       </div>
 
       {activeMatch ? (
-        <div className="border-b border-panelBorder/40 bg-void/80 px-3 py-3 sm:px-5">
-          <div className="mb-1 font-mono text-[9px] tracking-[0.35em] text-text-muted">
+        <div className="border-b border-white/8 bg-black/10 px-3 py-4 sm:px-5">
+          <div className="mb-1 font-mono text-[9px] tracking-[0.35em] text-[#7d8388]">
             {["", "ROUND OF 16", "QUARTER-FINALS", "SEMI-FINALS", "FINAL"][activeMatch.round]}
           </div>
-          <div className="break-words font-display text-base font-bold tracking-wide text-text-primary sm:text-lg">
-            {team1?.name ?? "TBD"} <span className="mx-1 text-sm text-purple-mid">VS</span> {team2?.name ?? "TBD"}
+          <div className="break-words font-display text-base font-bold tracking-[0.12em] text-[#f3f0e8] sm:text-lg">
+            {team1?.name ?? "TBD"} <span className="mx-1 text-sm text-[#8f9499]">VS</span> {team2?.name ?? "TBD"}
           </div>
         </div>
       ) : (
-        <div className="border-b border-panelBorder/40 py-4 text-center font-mono text-xs tracking-widest text-text-muted">
+        <div className="border-b border-white/8 py-4 text-center font-mono text-xs tracking-widest text-[#8f9499]">
           NO ACTIVE MATCH
         </div>
       )}
 
-      <div className="border-b border-panelBorder/40 bg-panel/30 px-3 py-3">
+      <div className="border-b border-white/8 bg-black/10 px-3 py-3">
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <span className="rounded-full border border-panelBorder/60 px-3 py-1 font-mono text-[9px] tracking-[0.22em] text-text-secondary">
+          <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[9px] tracking-[0.22em] text-[#bcc0c4]">
             WALL = +2s
           </span>
-          <span className="rounded-full border border-panelBorder/60 px-3 py-1 font-mono text-[9px] tracking-[0.22em] text-text-secondary">
+          <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[9px] tracking-[0.22em] text-[#bcc0c4]">
             INTERVENTION = +5s
           </span>
-          <span className="rounded-full border border-accent-red/35 bg-accent-red/10 px-3 py-1 font-mono text-[9px] tracking-[0.22em] text-accent-red">
+          <span className="rounded-full border border-accent-red/25 bg-accent-red/8 px-3 py-1 font-mono text-[9px] tracking-[0.22em] text-[#e1b9c1]">
             4 INTERVENTIONS = OUT
           </span>
         </div>
       </div>
 
-      <div className="border-b border-panelBorder/40 bg-panel/30 px-3 py-4 text-center">
+      <div className="border-b border-white/8 bg-black/10 px-3 py-5 text-center">
         <div
           className={`font-display text-4xl font-black tracking-wider ${
-            timerData.isRunning ? "text-text-primary glow-text" : "text-text-secondary"
+            timerData.isRunning ? "text-[#f6f2ea]" : "text-[#9ba0a5]"
           }`}
         >
           {formatTime(elapsedMs)}
@@ -410,13 +411,13 @@ export default function JuryPage() {
         <div
           className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[9px] tracking-widest ${
             timerData.isRunning
-              ? "border-accent-green/40 bg-accent-green/10 text-accent-green"
-              : "border-panelBorder text-text-muted"
+              ? "border-white/12 bg-white/[0.05] text-[#c5cec0]"
+              : "border-white/10 bg-white/[0.03] text-[#8f9499]"
           }`}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              timerData.isRunning ? "bg-accent-green animate-pulse" : "bg-text-dim"
+              timerData.isRunning ? "bg-[#93a089] animate-pulse" : "bg-[#6f757b]"
             }`}
           />
           {timerData.isRunning ? "RUNNING" : "STOPPED"}
@@ -424,12 +425,12 @@ export default function JuryPage() {
       </div>
 
       {loadError && !loading && (
-        <div className="border-b border-accent-red/30 bg-accent-red/10 px-3 py-4">
+        <div className="border-b border-accent-red/20 bg-accent-red/8 px-3 py-4">
           <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
-            <div className="font-display text-sm font-black tracking-widest text-accent-red">
+            <div className="font-display text-sm font-black tracking-widest text-[#f0c7cf]">
               CONTROL SERVER UNREACHABLE
             </div>
-            <div className="font-mono text-[10px] leading-5 tracking-[0.16em] text-text-secondary">
+            <div className="font-mono text-[10px] leading-5 tracking-[0.16em] text-[#bcc0c4]">
               {loadError}
             </div>
             <button
@@ -437,7 +438,7 @@ export default function JuryPage() {
                 setLoading(true);
                 loadState();
               }}
-              className="rounded-lg border border-accent-red/45 bg-accent-red/10 px-4 py-2 font-mono text-[10px] tracking-[0.22em] text-accent-red transition-colors hover:bg-accent-red/20"
+              className="rounded-lg border border-accent-red/25 bg-accent-red/10 px-4 py-2 font-mono text-[10px] tracking-[0.22em] text-[#f0c7cf] transition-colors hover:bg-accent-red/15"
             >
               RETRY
             </button>
@@ -447,7 +448,7 @@ export default function JuryPage() {
 
       {loading ? (
         <div className="min-h-[45dvh] flex items-center justify-center">
-          <div className="font-display text-xs tracking-widest text-purple-vivid animate-pulse">LOADING…</div>
+          <div className="font-display text-xs tracking-[0.24em] text-[#bcc0c4] animate-pulse">LOADING...</div>
         </div>
       ) : (
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 p-3 sm:max-w-5xl sm:grid sm:grid-cols-2 sm:gap-4 sm:p-4">

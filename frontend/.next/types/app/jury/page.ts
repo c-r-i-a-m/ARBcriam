@@ -1,4 +1,4 @@
-// File: /home/nacreousdawn596/Downloads/crcarb/nexus-tournament/tournament/frontend/app/jury/page.tsx
+// File: C:\Users\Kamal\Downloads\ARBcriam-master\frontend\app\jury\page.tsx
 import * as entry from '../../../../app/jury/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

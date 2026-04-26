@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine, Base
+from database import engine, Base, apply_schema_updates
 from routers import teams, bracket, matches, timer, events, logs, state
 from services.websocket_manager import router as ws_router
 
 Base.metadata.create_all(bind=engine)
+apply_schema_updates()
 
 app = FastAPI(title="Tournament Control System", version="1.0.0")
 

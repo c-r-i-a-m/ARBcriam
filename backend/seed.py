@@ -1,64 +1,106 @@
 """
 Run with: python seed.py
-Seeds the database with 16 placeholder teams and initializes the bracket.
+Seeds the database with 16 placeholder teams and initializes the empty bracket shell.
 """
-import sys
+
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(__file__))
 
-from database import engine, SessionLocal, Base
 import models
-from models import Team, Match, TournamentState
-from services.bracket_service import seed_bracket
+from database import Base, SessionLocal, apply_schema_updates, engine
+from models import Team
 from services.audit import log_action
+from services.bracket_service import TOURNAMENT_TEAM_CAPACITY, seed_bracket
 
 TEAMS = [
-    ("MECHA-01", 1), ("TITAN-7", 2), ("ARB", 3), ("APEX UNIT", 4),
-    ("IRONCLAD", 5), ("PHANTOM X", 6), ("VORTEX", 7), ("ZERO-G", 8),
-    ("STRIKER", 9), ("NOVA", 10), ("PULSE", 11), ("ECHO", 12),
-    ("AXIOM", 13), ("HYDRA", 14), ("DELTA-3", 15), ("SPARK", 16),
+    ("GreenLab", 1),
+    ("Maze Runners", 2),
+    ("Akatsuki", 3),
+    ("Meca 36", 4),
+    ("lmkmlin", 5),
+    ("CR^2", 6),
+    ("MazeRiders", 7),
+    ("fsdmrobotics", 8),
+    ("GearStorm", 9),
+    ("AUI Mechatronics", 10),
+    ("lbalbala", 11),
+    ("ElectroPower", 12),
+    ("IMPERIUM", 13),
+    ("CSC-", 14),
+    ("ERROR POWER", 15),
+    ("circuit breaker", 16),
 ]
 
 
-def run():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+def validate_seed_data() -> None:
+    if len(TEAMS) != TOURNAMENT_TEAM_CAPACITY:
+        raise ValueError(
+            f"Expected exactly {TOURNAMENT_TEAM_CAPACITY} teams for the roulette flow, found {len(TEAMS)}."
+        )
 
-    # Clear existing data
+    names = [name for name, _seed in TEAMS]
+    if len(set(names)) != len(names):
+        raise ValueError("Team names in TEAMS must be unique.")
+
+    seeds = [seed for _name, seed in TEAMS]
+    if len(set(seeds)) != len(seeds):
+        raise ValueError("Team seeds in TEAMS must be unique.")
+
+
+def clear_database(db) -> None:
     db.query(models.AuditLog).delete()
     db.query(models.PenaltyEvent).delete()
     db.query(models.RecordEvent).delete()
+    db.query(models.RouletteSelection).delete()
     db.query(models.TimerState).delete()
     db.query(models.TournamentState).delete()
     db.query(models.Match).delete()
     db.query(models.Team).delete()
     db.commit()
 
-    # Create teams
-    teams = []
+
+def create_teams(db) -> list[Team]:
+    teams: list[Team] = []
     for name, seed in TEAMS:
-        t = Team(name=name, seed=seed)
-        db.add(t)
+        team = Team(name=name, seed=seed)
+        db.add(team)
         db.flush()
-        teams.append(t)
+        teams.append(team)
+
     db.commit()
 
-    # Refresh all
-    for t in teams:
-        db.refresh(t)
+    for team in teams:
+        db.refresh(team)
 
-    # Initialize bracket
-    seed_bracket(db, teams)
+    return teams
 
-    log_action(db, "database_seeded", payload={"teams": [t.name for t in teams]})
 
-    print(f"✓ Seeded {len(teams)} teams")
-    print(f"✓ Created bracket with 15 matches")
-    print("\nTeams:")
-    for t in teams:
-        print(f"  [{t.seed:2d}] {t.name} (id={t.id})")
+def run() -> None:
+    validate_seed_data()
+    Base.metadata.create_all(bind=engine)
+    apply_schema_updates()
 
-    db.close()
+    db = SessionLocal()
+    try:
+        clear_database(db)
+        teams = create_teams(db)
+
+        # Create the empty 15-match bracket shell.
+        # Teams are then placed from the roulette page before tournament start.
+        seed_bracket(db)
+
+        log_action(db, "database_seeded", payload={"teams": [team.name for team in teams]})
+
+        print(f"Seeded {len(teams)} teams")
+        print("Created empty bracket with 15 matches")
+        print("Roulette is required to place teams into the bracket before the tournament starts")
+        print("\nTeams:")
+        for team in teams:
+            print(f"  [{team.seed:2d}] {team.name} (id={team.id})")
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

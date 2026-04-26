@@ -38,6 +38,11 @@ export const api = {
     req<any>("/api/teams/", { method: "POST", body: JSON.stringify({ name, seed }) }),
   updateTeam: (id: number, name: string, seed?: number) =>
     req<any>(`/api/teams/${id}`, { method: "PUT", body: JSON.stringify({ name, seed }) }),
+  getRoulette: () => req<any>("/api/teams/roulette"),
+  pickRouletteTeam: () => req<any>("/api/teams/roulette/pick", { method: "POST" }),
+  confirmRouletteTeam: (team_id: number, source = "web") =>
+    req<any>("/api/teams/roulette/confirm", { method: "POST", body: JSON.stringify({ team_id, source }) }),
+  spinRoulette: () => req<any>("/api/teams/roulette/spin", { method: "POST" }),
 
   getBracket:   () => req<any[]>("/api/bracket/"),
   updateMatch:  (match_id: number, team1_id?: number | null, team2_id?: number | null) =>
@@ -66,6 +71,10 @@ export const api = {
   addRecord: (match_id: number, team_id: number, source = "web") =>
     req<any>("/api/events/records", { method: "POST", body: JSON.stringify({ match_id, team_id, source }) }),
   getRecords: (match_id: number) => req<any[]>(`/api/events/records/${match_id}`),
+  finishMatch: (match_id: number, source = "web") =>
+    req<any>("/api/events/finish", { method: "POST", body: JSON.stringify({ match_id, source }) }),
+  confirmPendingResolution: (match_id: number, source = "web") =>
+    req<any>("/api/events/confirm-resolution", { method: "POST", body: JSON.stringify({ match_id, source }) }),
 
   getLogs: (match_id?: number, limit = 50) =>
     req<any[]>(`/api/logs/?limit=${limit}${match_id ? `&match_id=${match_id}` : ""}`),

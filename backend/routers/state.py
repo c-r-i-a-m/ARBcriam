@@ -1,10 +1,18 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Match, Team, TournamentState, PenaltyEvent, RecordEvent
+from models import Match, Team, TournamentState, PenaltyEvent, RecordEvent, RouletteSelection
 from services.timer_service import get_or_create_timer, compute_elapsed_ms
-from services.bracket_service import ensure_active_match, get_full_bracket, seed_bracket
+from services.bracket_service import (
+    ensure_active_match,
+    ensure_bracket_exists,
+    get_full_bracket,
+    get_roulette_state,
+    seed_bracket,
+)
 from services.audit import log_action
+from services.match_resolution import get_pending_resolution
+from services.penalties import build_penalty_summaries
 from services.websocket_manager import manager
 
 router = APIRouter()
@@ -12,15 +20,18 @@ router = APIRouter()
 
 @router.get("/current")
 def get_current_state(db: Session = Depends(get_db)):
+    ensure_bracket_exists(db)
     ensure_active_match(db)
     state = db.query(TournamentState).first()
     teams = db.query(Team).order_by(Team.seed, Team.id).all()
     matches = get_full_bracket(db)
+    roulette = get_roulette_state(db)
 
     active_match = None
     timer_data = None
     penalties = {}
     records = {}
+    pending_resolution = get_pending_resolution(db)
 
     if state and state.active_match_id:
         active_match = db.query(Match).filter(Match.id == state.active_match_id).first()
@@ -35,10 +46,8 @@ def get_current_state(db: Session = Depends(get_db)):
                 "accumulated_elapsed_ms": timer.accumulated_elapsed_ms,
                 "current_elapsed_ms": elapsed,
             }
-            # Penalty counts
             evs = db.query(PenaltyEvent).filter(PenaltyEvent.match_id == active_match.id).all()
-            for e in evs:
-                penalties[e.team_id] = penalties.get(e.team_id, 0) + e.penalty_value
+            penalties = build_penalty_summaries(evs)
             # Records
             recs = db.query(RecordEvent).filter(RecordEvent.match_id == active_match.id).order_by(RecordEvent.created_at).all()
             for r in recs:
@@ -78,8 +87,10 @@ def get_current_state(db: Session = Depends(get_db)):
         "active_match_id": state.active_match_id if state else None,
         "current_round": state.current_round if state else 1,
         "timer": timer_data,
+        "pending_resolution": pending_resolution,
         "penalties": penalties,
         "records": records,
+        "roulette": roulette,
         "teams": [{"id": t.id, "name": t.name, "seed": t.seed} for t in teams],
         "matches": [serialize_match(m) for m in matches],
     }
@@ -92,16 +103,16 @@ async def reset_tournament(db: Session = Depends(get_db)):
     db.query(AuditLog).delete()
     db.query(PenaltyEvent).delete()
     db.query(RecordEvent).delete()
+    db.query(RouletteSelection).delete()
     db.query(TimerState).delete()
     db.query(TournamentState).delete()
     db.query(Match).delete()
     db.commit()
 
-    teams = db.query(Team).order_by(Team.seed, Team.id).all()
-    if len(teams) >= 16:
-        seed_bracket(db, teams[:16])
+    if db.query(Team).count() > 0:
+        seed_bracket(db)
 
-    log_action(db, "tournament_reset", payload={"teams": len(teams)})
+    log_action(db, "tournament_reset", payload={"teams": db.query(Team).count()})
 
     await manager.broadcast({"type": "tournament_reset"})
     return {"ok": True}
@@ -109,17 +120,13 @@ async def reset_tournament(db: Session = Depends(get_db)):
 
 @router.post("/init")
 async def init_bracket(db: Session = Depends(get_db)):
-    """Initialize bracket with existing teams (idempotent if already done)."""
+    """Initialize the empty bracket shell (idempotent if already done)."""
     existing = db.query(Match).count()
     if existing > 0:
         ensure_active_match(db)
         return {"ok": True, "message": "Bracket already initialized", "matches": existing}
 
-    teams = db.query(Team).order_by(Team.seed, Team.id).all()
-    if len(teams) < 16:
-        return {"ok": False, "message": f"Need 16 teams, have {len(teams)}"}
-
-    seed_bracket(db, teams[:16])
-    log_action(db, "bracket_initialized", payload={"teams": 16})
+    seed_bracket(db)
+    log_action(db, "bracket_initialized", payload={"teams": db.query(Team).count()})
     await manager.broadcast({"type": "bracket_initialized"})
-    return {"ok": True, "message": "Bracket initialized"}
+    return {"ok": True, "message": "Bracket shell initialized"}

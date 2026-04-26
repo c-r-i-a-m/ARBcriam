@@ -6,11 +6,14 @@ from schemas import MatchOut, WinnerSelectRequest, BracketUpdateRequest
 from services.bracket_service import (
     advance_winner,
     ensure_active_match,
+    ensure_bracket_exists,
     get_full_bracket,
+    is_bracket_ready,
     is_playable_match,
     set_tournament_active_match,
 )
 from services.audit import log_action
+from services.match_resolution import has_pending_resolution_for_match
 from services.websocket_manager import manager
 from typing import List
 
@@ -19,6 +22,7 @@ router = APIRouter()
 
 @router.get("/", response_model=List[MatchOut])
 def get_bracket(db: Session = Depends(get_db)):
+    ensure_bracket_exists(db)
     return get_full_bracket(db)
 
 
@@ -56,6 +60,8 @@ async def select_winner(body: WinnerSelectRequest, db: Session = Depends(get_db)
     match = db.query(Match).filter(Match.id == body.match_id).first()
     if not match:
         raise HTTPException(404, "Match not found")
+    if has_pending_resolution_for_match(db, body.match_id):
+        raise HTTPException(409, "Confirm the pending timer-page resolution before updating the bracket")
 
     if body.winner_id not in [match.team1_id, match.team2_id]:
         raise HTTPException(400, "Winner must be one of the match teams")
@@ -92,18 +98,20 @@ async def select_winner(body: WinnerSelectRequest, db: Session = Depends(get_db)
     })
     if was_active:
         active_match = ensure_active_match(db)
-        if active_match:
-            await manager.broadcast({
-                "type": "active_match_changed",
-                "match_id": active_match.id,
-                "round": active_match.round,
-            })
+        await manager.broadcast({
+            "type": "active_match_changed",
+            "match_id": active_match.id if active_match else None,
+            "round": active_match.round if active_match else None,
+        })
     db.refresh(match)
     return match
 
 
 @router.post("/active/{match_id}")
 async def set_active_match(match_id: int, db: Session = Depends(get_db)):
+    if not is_bracket_ready(db):
+        raise HTTPException(400, "The tournament cannot start until the roulette fills all 16 slots")
+
     match = db.query(Match).filter(Match.id == match_id).first()
     if not match:
         raise HTTPException(404, "Match not found")

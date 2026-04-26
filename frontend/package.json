@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "node scripts/run-next-with-server-chunk-mirror.js dev -p 3000",
     "build": "next build",
     "start": "next start"
   },

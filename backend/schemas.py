@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import Literal, Optional, List, Any
 from datetime import datetime
 
 
@@ -16,6 +16,24 @@ class TeamOut(TeamBase):
     id: int
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RouletteConfirmRequest(BaseModel):
+    team_id: int
+    source: str = "web"
+
+
+class RouletteSelectionOut(BaseModel):
+    id: int
+    team_id: int
+    selection_order: int
+    match_id: int
+    team_slot: int
+    created_at: datetime
+    team: Optional[TeamOut]
 
     class Config:
         from_attributes = True
@@ -65,6 +83,7 @@ class PenaltyEventOut(BaseModel):
     id: int
     match_id: int
     team_id: int
+    penalty_type: Literal["hit_the_wall", "intervention", "legacy"]
     penalty_value: int
     created_at: datetime
     source: str
@@ -86,6 +105,19 @@ class RecordEventOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PendingResolutionOut(BaseModel):
+    type: str
+    match_id: int
+    winner_id: int
+    winner_name: Optional[str] = None
+    loser_id: int
+    loser_name: Optional[str] = None
+    message: Optional[str] = None
+    tone: Optional[str] = None
+    metadata: dict[str, Any] = {}
+    created_at: Optional[str] = None
 
 
 class AuditLogOut(BaseModel):
@@ -121,6 +153,7 @@ class TimerActionRequest(BaseModel):
 class PenaltyRequest(BaseModel):
     match_id: int
     team_id: int
+    penalty_type: Literal["hit_the_wall", "intervention"]
     source: str = "web"
 
 
@@ -131,11 +164,22 @@ class RecordRequest(BaseModel):
     source: str = "web"
 
 
+class FinishMatchRequest(BaseModel):
+    match_id: int
+    source: str = "web"
+
+
+class ConfirmPendingResolutionRequest(BaseModel):
+    match_id: int
+    source: str = "web"
+
+
 class TournamentStateOut(BaseModel):
     active_match_id: Optional[int]
     current_round: int
     active_match: Optional[MatchOut]
     timer: Optional[TimerStateOut]
+    pending_resolution: Optional[PendingResolutionOut] = None
     teams: List[TeamOut]
     matches: List[MatchOut]
 

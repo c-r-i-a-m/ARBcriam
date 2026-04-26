@@ -1,4 +1,4 @@
-// File: /home/nacreousdawn596/Downloads/crcarb/nexus-tournament/tournament/frontend/app/layout.tsx
+// File: C:\Users\Kamal\Downloads\ARBcriam-master\frontend\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -1,4 +1,4 @@
-// File: /home/nacreousdawn596/Downloads/crcarb/nexus-tournament/tournament/frontend/app/timer/page.tsx
+// File: C:\Users\Kamal\Downloads\ARBcriam-master\frontend\app\timer\page.tsx
 import * as entry from '../../../../app/timer/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

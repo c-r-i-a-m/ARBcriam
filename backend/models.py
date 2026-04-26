@@ -16,6 +16,19 @@ class Team(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class RouletteSelection(Base):
+    __tablename__ = "roulette_selections"
+    id = Column(Integer, primary_key=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False, unique=True)
+    selection_order = Column(Integer, nullable=False, unique=True)
+    match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
+    team_slot = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    team = relationship("Team")
+    match = relationship("Match")
+
+
 class Match(Base):
     __tablename__ = "matches"
     id = Column(Integer, primary_key=True, index=True)
@@ -51,7 +64,8 @@ class PenaltyEvent(Base):
     id = Column(Integer, primary_key=True)
     match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    penalty_value = Column(Integer, default=1)
+    penalty_type = Column(String(20), default="legacy")
+    penalty_value = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     source = Column(String(100), default="web")
 
@@ -87,4 +101,12 @@ class TournamentState(Base):
     id = Column(Integer, primary_key=True)
     active_match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
     current_round = Column(Integer, default=1)
+    pending_resolution_type = Column(String(32), nullable=True)
+    pending_resolution_match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
+    pending_resolution_winner_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    pending_resolution_loser_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    pending_resolution_message = Column(String(255), nullable=True)
+    pending_resolution_tone = Column(String(16), nullable=True)
+    pending_resolution_payload_json = Column(Text, nullable=True)
+    pending_resolution_created_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

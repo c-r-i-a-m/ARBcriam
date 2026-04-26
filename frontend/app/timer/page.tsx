@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { useTimer, formatTime } from "@/hooks/useTimer";
@@ -15,6 +16,7 @@ import {
 import { appendRecordIfMissing, dedupeRecords } from "@/lib/records";
 import type {
   Match,
+  PendingResolution,
   PenaltyType,
   RecordEvent,
   TeamPenaltySummary,
@@ -37,9 +39,9 @@ function ControlButton({
   const tones = {
     wall: "border-accent-red/45 bg-accent-red/10 text-accent-red hover:bg-accent-red/20 hover:shadow-glow-red",
     intervention:
-      "border-orange-400/45 bg-orange-400/10 text-orange-200 hover:bg-orange-400/20 hover:shadow-[0_8px_18px_rgba(251,146,60,0.16)]",
+      "border-white/12 bg-white/6 text-[#d9d6cf] hover:bg-white/10 hover:shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
     record:
-      "border-purple-mid/45 bg-purple-mid/10 text-purple-vivid hover:bg-purple-mid/20 hover:shadow-glow-sm",
+      "border-white/15 bg-white/8 text-text-primary hover:bg-white/12 hover:shadow-glow-sm",
   };
 
   return (
@@ -66,6 +68,7 @@ function TeamPanel({
   onRecord,
   loading,
   isActive,
+  resolutionLocked,
 }: {
   team: { id: number; name: string } | null;
   side: "left" | "right";
@@ -75,13 +78,14 @@ function TeamPanel({
   onRecord: () => void;
   loading: boolean;
   isActive: boolean;
+  resolutionLocked: boolean;
 }) {
   const isLeft = side === "left";
   const latestRecord = getLatestRecord(records);
   const adjustedElapsedMs = latestRecord
     ? getAdjustedElapsedMs(latestRecord.recorded_elapsed_ms, penaltySummary)
     : null;
-  const actionsDisabled = loading || !team || !isActive || penaltySummary.eliminated;
+  const actionsDisabled = loading || !team || !isActive || penaltySummary.eliminated || resolutionLocked;
 
   return (
     <div
@@ -92,21 +96,21 @@ function TeamPanel({
     >
       <div
         className={`
-          absolute inset-0 opacity-30 pointer-events-none
+          pointer-events-none absolute inset-0 opacity-30
           ${
             isLeft
-              ? "bg-[radial-gradient(ellipse_80%_60%_at_0%_50%,rgba(39,24,126,0.08),transparent)]"
-              : "bg-[radial-gradient(ellipse_80%_60%_at_100%_50%,rgba(39,24,126,0.08),transparent)]"
+              ? "bg-[radial-gradient(ellipse_80%_60%_at_0%_50%,rgba(255,255,255,0.04),transparent)]"
+              : "bg-[radial-gradient(ellipse_80%_60%_at_100%_50%,rgba(255,255,255,0.04),transparent)]"
           }
         `}
       />
 
       <div className={`relative flex flex-col ${isLeft ? "items-start" : "items-end"}`}>
-        <div className="mb-2 font-mono text-[10px] tracking-[0.35em] text-text-muted uppercase">
-          {isLeft ? "← LEFT" : "RIGHT →"}
+        <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.35em] text-text-muted">
+          {isLeft ? "<- LEFT" : "RIGHT ->"}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="font-display text-4xl xl:text-5xl font-black tracking-wider text-text-primary glow-text leading-none">
+          <h2 className="glow-text font-display text-4xl font-black leading-none tracking-wider text-text-primary xl:text-5xl">
             {team?.name ?? "TBD"}
           </h2>
           {penaltySummary.eliminated && (
@@ -120,11 +124,11 @@ function TeamPanel({
       <div className={`relative my-6 flex flex-col ${isLeft ? "items-start" : "items-end"}`}>
         <div className="mb-1 font-mono text-[9px] tracking-[0.4em] text-text-muted">TEAM RECORD</div>
         {penaltySummary.eliminated ? (
-          <div className="font-display text-5xl xl:text-6xl font-black leading-none text-accent-red">
+          <div className="font-display text-5xl font-black leading-none text-accent-red xl:text-6xl">
             ELIMINATED
           </div>
         ) : (
-          <div className="font-display text-6xl xl:text-7xl font-black leading-none text-text-primary">
+          <div className="font-display text-6xl font-black leading-none text-text-primary xl:text-7xl">
             {adjustedElapsedMs !== null ? formatTime(adjustedElapsedMs) : "--:--.--"}
           </div>
         )}
@@ -166,7 +170,7 @@ function TeamPanel({
                 penaltySummary.eliminated
                   ? "text-accent-red"
                   : penaltySummary.intervention_count >= 3
-                    ? "text-orange-200"
+                    ? "text-accent-orange"
                     : "text-accent-green"
               }`}
             >
@@ -195,7 +199,7 @@ function TeamPanel({
           />
           <ControlButton
             label="+ INTERVENTION"
-            sublabel="+5S · 4TH INTERVENTION = OUT"
+            sublabel="+5S - 4TH INTERVENTION = OUT"
             onClick={() => onPenalty("intervention")}
             disabled={actionsDisabled}
             tone="intervention"
@@ -204,7 +208,7 @@ function TeamPanel({
 
         <div className="w-full max-w-[360px]">
           <ControlButton
-            label="⬡ RECORD TIME"
+            label="RECORD TIME"
             sublabel={penaltySummary.eliminated ? "DISABLED AFTER ELIMINATION" : "SAVE CURRENT CHRONO SNAPSHOT"}
             onClick={onRecord}
             disabled={actionsDisabled}
@@ -222,14 +226,88 @@ function TeamPanel({
               className="flex items-center gap-2 rounded-md border border-panelBorder/60 bg-panel/50 px-3 py-1.5 font-mono text-xs"
             >
               <span className="text-text-muted">#{records.length - Math.min(records.length, 5) + index + 1}</span>
-              <span className="font-semibold text-purple-vivid">
-                {formatTime(record.recorded_elapsed_ms)}
-              </span>
+              <span className="font-semibold text-purple-vivid">{formatTime(record.recorded_elapsed_ms)}</span>
               {record.label && <span className="text-[10px] text-text-muted">{record.label}</span>}
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function PendingResolutionCard({
+  resolution,
+  activeMatch,
+  onConfirm,
+  loading,
+}: {
+  resolution: PendingResolution;
+  activeMatch: Match | null;
+  onConfirm: () => void;
+  loading: boolean;
+}) {
+  const isGreen = resolution.tone === "green";
+  const borderTone = isGreen
+    ? "border-accent-green/55 bg-[#0f241d]/98 text-[#dcffe7]"
+    : "border-accent-red/55 bg-[#2b1116]/98 text-[#ffd9df]";
+  const buttonTone = isGreen
+    ? "border-accent-green/45 bg-accent-green/18 text-accent-green hover:bg-accent-green/28"
+    : "border-accent-red/45 bg-accent-red/18 text-accent-red hover:bg-accent-red/26";
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-6">
+      <div
+        className={`pointer-events-auto w-full max-w-3xl rounded-[28px] border px-6 py-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm ${borderTone}`}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.32em] opacity-80">
+              {isGreen ? "MATCH READY TO ADVANCE" : "ELIMINATION REQUIRES CONFIRMATION"}
+            </div>
+            <div className="mt-2 font-display text-3xl font-black tracking-wide">
+              {isGreen
+                ? `${resolution.winner_name ?? "This team"} wins`
+                : `${resolution.loser_name ?? "This team"} was eliminated`}
+            </div>
+            <div className="mt-2 max-w-2xl font-mono text-xs leading-6 opacity-90">
+              {resolution.message}
+            </div>
+            {resolution.type === "time_win" && (
+              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[10px] tracking-[0.22em]">
+                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+                  WINNER {resolution.metadata.winner_adjusted_elapsed_display ?? "--:--.--"}
+                </span>
+                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+                  OPPONENT {resolution.metadata.loser_adjusted_elapsed_display ?? "--:--.--"}
+                </span>
+              </div>
+            )}
+            {resolution.type === "elimination" && (
+              <div className="mt-3 inline-flex rounded-full border border-white/10 bg-black/20 px-3 py-1 font-mono text-[10px] tracking-[0.22em]">
+                {resolution.metadata.intervention_count ?? 4} interventions recorded
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col items-start gap-3 lg:items-end">
+            <div className="font-mono text-[10px] tracking-[0.26em] opacity-75">
+              {activeMatch
+                ? `${["", "ROUND OF 16", "QUARTER-FINALS", "SEMI-FINALS", "FINAL"][activeMatch.round]} - MATCH #${activeMatch.id}`
+                : `MATCH #${resolution.match_id}`}
+            </div>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className={`rounded-2xl border px-5 py-3 font-display text-sm font-bold tracking-[0.22em] transition-all ${
+                loading ? "cursor-not-allowed opacity-40" : `${buttonTone} shadow-[0_10px_28px_rgba(0,0,0,0.22)]`
+              }`}
+            >
+              {loading ? "CONFIRMING..." : "CONFIRM AND ADVANCE"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -242,6 +320,7 @@ export default function TimerPage() {
   });
   const [penalties, setPenalties] = useState<Record<number, TeamPenaltySummary>>({});
   const [records, setRecords] = useState<Record<number, RecordEvent[]>>({});
+  const [pendingResolution, setPendingResolution] = useState<PendingResolution | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [eventFeed, setEventFeed] = useState<string[]>([]);
@@ -256,11 +335,12 @@ export default function TimerPage() {
     try {
       const state = await api.getState();
       if (state.active_match_id) {
-        const match = state.matches?.find((m: Match) => m.id === state.active_match_id);
+        const match = state.matches?.find((item: Match) => item.id === state.active_match_id);
         setActiveMatch(match ?? null);
       } else {
         setActiveMatch(null);
       }
+
       if (state.timer) {
         setTimerData({
           isRunning: state.timer.is_running,
@@ -269,7 +349,10 @@ export default function TimerPage() {
       } else {
         setTimerData({ isRunning: false, baseElapsedMs: 0 });
       }
+
       setPenalties(state.penalties ?? {});
+      setPendingResolution(state.pending_resolution ?? null);
+
       if (state.records) {
         const byTeam: Record<number, RecordEvent[]> = {};
         for (const [teamId, teamRecords] of Object.entries(state.records)) {
@@ -313,15 +396,32 @@ export default function TimerPage() {
         break;
       case "timer_reset":
         setTimerData({ isRunning: false, baseElapsedMs: 0 });
+        setPendingResolution(null);
+        loadState();
         addFeedEntry("Timer reset");
         break;
       case "penalty_added":
         setPenalties((prev) => ({ ...prev, [msg.team_id]: msg.penalty_summary }));
         addFeedEntry(
           `${getPenaltyTypeLabel(msg.penalty_type)} for team #${msg.team_id} (+${msg.penalty_value}s, total +${msg.penalty_summary.total_seconds}s)${
-            msg.eliminated ? ` · eliminated, winner team #${msg.auto_winner_id}` : ""
+            msg.eliminated ? " - pending elimination confirmation" : ""
           }`
         );
+        break;
+      case "match_resolution_pending":
+        setPendingResolution(msg.pending_resolution);
+        addFeedEntry(
+          msg.pending_resolution.type === "time_win"
+            ? `${msg.pending_resolution.winner_name ?? "A team"} is ready to advance`
+            : `${msg.pending_resolution.loser_name ?? "A team"} was eliminated`
+        );
+        break;
+      case "match_resolution_cleared":
+        setPendingResolution((current) => (current?.match_id === msg.match_id ? null : current));
+        addFeedEntry(`Resolution confirmed for match #${msg.match_id}`);
+        break;
+      case "winner_selected":
+        addFeedEntry(`Winner confirmed for match #${msg.match_id}`);
         break;
       case "time_recorded":
         setRecords((prev) => ({
@@ -339,6 +439,7 @@ export default function TimerPage() {
         addFeedEntry(`Time recorded for team #${msg.team_id}: ${formatTime(msg.elapsed_ms)}`);
         break;
       case "tournament_reset":
+        setPendingResolution(null);
         loadState();
         addFeedEntry("Tournament reset");
         break;
@@ -388,27 +489,51 @@ export default function TimerPage() {
     [activeMatch]
   );
 
+  const handleFinish = useCallback(async () => {
+    if (!activeMatch) return;
+    setActionLoading(true);
+    try {
+      await api.finishMatch(activeMatch.id, "timer_page");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [activeMatch]);
+
+  const handleConfirmResolution = useCallback(async () => {
+    if (!activeMatch || !pendingResolution) return;
+    setActionLoading(true);
+    try {
+      await api.confirmPendingResolution(activeMatch.id, "timer_page");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [activeMatch, pendingResolution]);
+
   const team1 = activeMatch?.team1 ?? null;
   const team2 = activeMatch?.team2 ?? null;
   const team1PenaltySummary = getTeamPenaltySummary(penalties, team1?.id);
   const team2PenaltySummary = getTeamPenaltySummary(penalties, team2?.id);
 
+  const resolutionLocked = Boolean(activeMatch && pendingResolution?.match_id === activeMatch.id);
+  const hasBothRecordedTimes = useMemo(() => {
+    if (!team1 || !team2) return false;
+    return Boolean(getLatestRecord(records[team1.id] ?? []) && getLatestRecord(records[team2.id] ?? []));
+  }, [records, team1, team2]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="font-display text-purple-vivid text-sm tracking-widest animate-pulse">
-          LOADING…
-        </div>
+        <div className="font-display text-sm tracking-widest text-purple-vivid animate-pulse">LOADING...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen grid-bg flex flex-col">
-      <header className="flex items-center justify-between px-8 py-3 border-b border-panelBorder/60 glass-panel z-20">
+    <div className="grid-bg min-h-screen flex flex-col">
+      <header className="glass-panel z-20 flex items-center justify-between border-b border-panelBorder/60 px-8 py-3">
         <Link
           href="/"
-          className="font-display text-xl font-black tracking-wider text-text-primary hover:text-purple-vivid transition-colors"
+          className="font-display text-xl font-black tracking-wider text-text-primary transition-colors hover:text-purple-vivid"
         >
           A.R.B
         </Link>
@@ -416,22 +541,22 @@ export default function TimerPage() {
           {activeMatch ? (
             <>
               <div className="font-mono text-[9px] tracking-[0.35em] text-text-muted">
-                {["", "ROUND OF 16", "QUARTER-FINALS", "SEMI-FINALS", "FINAL"][activeMatch.round]} · MATCH #
+                {["", "ROUND OF 16", "QUARTER-FINALS", "SEMI-FINALS", "FINAL"][activeMatch.round]} - MATCH #
                 {activeMatch.id}
               </div>
-              <div className="font-display text-sm font-bold text-text-primary tracking-wider">
-                {team1?.name} <span className="text-purple-mid mx-2">VS</span> {team2?.name}
+              <div className="font-display text-sm font-bold tracking-wider text-text-primary">
+                {team1?.name} <span className="mx-2 text-purple-mid">VS</span> {team2?.name}
               </div>
             </>
           ) : (
-            <div className="font-mono text-xs text-text-muted tracking-widest">NO ACTIVE MATCH</div>
+            <div className="font-mono text-xs tracking-widest text-text-muted">NO ACTIVE MATCH</div>
           )}
         </div>
         <Link
           href="/jury"
-          className="px-3 py-1.5 rounded border border-panelBorder text-text-secondary font-mono text-xs hover:border-purple-mid/50 hover:text-purple-vivid transition-all"
+          className="rounded border border-panelBorder px-3 py-1.5 font-mono text-xs text-text-secondary transition-all hover:border-purple-mid/50 hover:text-purple-vivid"
         >
-          JURY →
+          JURY {"->"}
         </Link>
       </header>
 
@@ -445,8 +570,8 @@ export default function TimerPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col">
-        <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 flex-col">
+        <div className="flex min-h-0 flex-1">
           <TeamPanel
             team={team1}
             side="left"
@@ -456,35 +581,36 @@ export default function TimerPage() {
             onRecord={() => team1 && handleRecord(team1.id)}
             loading={actionLoading}
             isActive={!!activeMatch}
+            resolutionLocked={resolutionLocked}
           />
 
-          <div className="flex flex-col items-center justify-center px-6 min-w-[280px] xl:min-w-[340px] relative">
-            <div className="absolute top-0 bottom-0 left-0 w-px bg-gradient-to-b from-transparent via-panelBorder to-transparent" />
-            <div className="absolute top-0 bottom-0 right-0 w-px bg-gradient-to-b from-transparent via-panelBorder to-transparent" />
+          <div className="relative flex min-w-[280px] flex-col items-center justify-center px-6 xl:min-w-[340px]">
+            <div className="absolute bottom-0 left-0 top-0 w-px bg-gradient-to-b from-transparent via-panelBorder to-transparent" />
+            <div className="absolute bottom-0 right-0 top-0 w-px bg-gradient-to-b from-transparent via-panelBorder to-transparent" />
 
             <div
               className={`
-                flex items-center gap-2 px-3 py-1 rounded-full border font-mono text-[9px] tracking-widest mb-6
+                mb-6 flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[9px] tracking-widest
                 ${timerData.isRunning ? "border-accent-green/40 bg-accent-green/10 text-accent-green" : "border-panelBorder text-text-muted"}
               `}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${timerData.isRunning ? "bg-accent-green animate-pulse" : "bg-text-dim"}`}
+                className={`h-1.5 w-1.5 rounded-full ${timerData.isRunning ? "animate-pulse bg-accent-green" : "bg-text-dim"}`}
               />
               {timerData.isRunning ? "RUNNING" : "STOPPED"}
             </div>
 
-            <div className="relative scan-overlay mb-6">
+            <div className="scan-overlay relative mb-6">
               <div
                 className={`
-                  font-display text-5xl xl:text-6xl font-black tracking-wider text-center transition-colors duration-300
-                  ${timerData.isRunning ? "text-text-primary timer-running glow-text" : "text-text-secondary"}
+                  font-display text-center text-5xl font-black tracking-wider transition-colors duration-300 xl:text-6xl
+                  ${timerData.isRunning ? "timer-running glow-text text-text-primary" : "text-text-secondary"}
                 `}
                 style={
                   timerData.isRunning
                     ? {
                         textShadow:
-                          "0 4px 26px rgba(39,24,126,0.20), 0 0 34px rgba(124,79,245,0.10)",
+                          "0 4px 26px rgba(255,255,255,0.08), 0 0 30px rgba(255,255,255,0.04)",
                       }
                     : undefined
                 }
@@ -492,7 +618,7 @@ export default function TimerPage() {
                 {formatTime(elapsedMs)}
               </div>
               {timerData.isRunning && (
-                <div className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-mid/60 to-transparent" />
+                <div className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
               )}
             </div>
 
@@ -502,41 +628,64 @@ export default function TimerPage() {
                 Raw time + team penalties
               </div>
               <div className="mt-1 max-w-[220px] font-mono text-[10px] leading-5 text-text-secondary">
-                Each wall hit adds 2 seconds. Each intervention adds 5 seconds. A team is eliminated on the 4th intervention.
+                Each wall hit adds 2 seconds. Each intervention adds 5 seconds. A team is eliminated on the 4th
+                intervention.
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 w-full max-w-[210px]">
+            {resolutionLocked && (
+              <div className="mb-5 w-full max-w-[240px] rounded-2xl border border-accent-orange/30 bg-accent-orange/8 px-4 py-3 text-center">
+                <div className="font-mono text-[9px] tracking-[0.24em] text-accent-orange">MATCH LOCKED</div>
+                <div className="mt-2 font-mono text-[10px] leading-5 text-text-secondary">
+                  Confirm the pending decision below before changing the timer or penalties again.
+                </div>
+              </div>
+            )}
+
+            <div className="flex w-full max-w-[210px] flex-col gap-2">
               {!timerData.isRunning ? (
                 <button
                   onClick={() => handleTimerAction("start")}
-                  disabled={!activeMatch || actionLoading}
-                  className="py-3 rounded-xl font-display font-bold text-sm tracking-widest bg-accent-green/15 border border-accent-green/40 text-accent-green hover:bg-accent-green/25 hover:shadow-[0_8px_18px_rgba(0,143,90,0.16)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  disabled={!activeMatch || actionLoading || resolutionLocked}
+                  className="rounded-xl border border-accent-green/40 bg-accent-green/15 py-3 font-display text-sm font-bold tracking-widest text-accent-green transition-all hover:bg-accent-green/25 hover:shadow-[0_8px_18px_rgba(0,143,90,0.16)] disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  ▶ START
+                  START
                 </button>
               ) : (
                 <button
                   onClick={() => handleTimerAction("stop")}
-                  disabled={actionLoading}
-                  className="py-3 rounded-xl font-display font-bold text-sm tracking-widest bg-accent-red/15 border border-accent-red/40 text-accent-red hover:bg-accent-red/25 hover:shadow-glow-red transition-all disabled:opacity-30"
+                  disabled={actionLoading || resolutionLocked}
+                  className="rounded-xl border border-accent-red/40 bg-accent-red/15 py-3 font-display text-sm font-bold tracking-widest text-accent-red transition-all hover:bg-accent-red/25 hover:shadow-glow-red disabled:opacity-30"
                 >
-                  ⬛ STOP
+                  STOP
                 </button>
               )}
               <button
                 onClick={() => handleTimerAction("reset")}
                 disabled={!activeMatch || actionLoading || timerData.isRunning}
-                className="py-2.5 rounded-xl font-display font-bold text-xs tracking-widest border border-panelBorder text-text-muted hover:border-purple-mid/30 hover:text-text-secondary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="rounded-xl border border-panelBorder py-2.5 font-display text-xs font-bold tracking-widest text-text-muted transition-all hover:border-purple-mid/30 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-30"
               >
-                ↺ RESET
+                RESET
+              </button>
+              <button
+                onClick={handleFinish}
+                disabled={!activeMatch || actionLoading || timerData.isRunning || resolutionLocked || !hasBothRecordedTimes}
+                className="rounded-xl border border-accent-green/35 bg-accent-green/10 py-2.5 font-display text-xs font-bold tracking-widest text-accent-green transition-all hover:bg-accent-green/18 hover:shadow-[0_10px_24px_rgba(0,143,90,0.14)] disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                FINISH MATCH
               </button>
             </div>
 
+            {!hasBothRecordedTimes && activeMatch && !resolutionLocked && (
+              <div className="mt-4 max-w-[220px] text-center font-mono text-[10px] leading-5 text-text-muted">
+                Record a time for both teams before using Finish Match.
+              </div>
+            )}
+
             {!activeMatch && (
               <div className="mt-6 text-center">
-                <Link href="/bracket" className="font-mono text-xs text-text-muted hover:text-purple-vivid transition-colors">
-                  ← Set active match in bracket
+                <Link href="/bracket" className="font-mono text-xs text-text-muted transition-colors hover:text-purple-vivid">
+                  {"<-"} Set active match in bracket
                 </Link>
               </div>
             )}
@@ -551,19 +700,29 @@ export default function TimerPage() {
             onRecord={() => team2 && handleRecord(team2.id)}
             loading={actionLoading}
             isActive={!!activeMatch}
+            resolutionLocked={resolutionLocked}
           />
         </div>
 
         {eventFeed.length > 0 && (
-          <div className="border-t border-panelBorder/60 bg-panel/50 px-6 py-2 max-h-32 overflow-y-auto">
+          <div className="max-h-32 overflow-y-auto border-t border-panelBorder/60 bg-panel/50 px-6 py-2">
             {eventFeed.map((entry, index) => (
-              <div key={index} className="font-mono text-[10px] text-text-muted leading-5 tracking-wide">
+              <div key={index} className="font-mono text-[10px] leading-5 tracking-wide text-text-muted">
                 {entry}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {pendingResolution && (
+        <PendingResolutionCard
+          resolution={pendingResolution}
+          activeMatch={activeMatch}
+          onConfirm={handleConfirmResolution}
+          loading={actionLoading}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
-from models import TimerState
+from models import TimerState, PenaltyEvent, RecordEvent
 from typing import Optional
 
 
@@ -51,6 +51,10 @@ def reset_timer(db: Session, match_id: int) -> TimerState:
     timer.started_at = None
     timer.accumulated_elapsed_ms = 0
     timer.updated_at = datetime.utcnow()
+
+    db.query(PenaltyEvent).filter(PenaltyEvent.match_id == match_id).delete()
+    db.query(RecordEvent).filter(RecordEvent.match_id == match_id).delete()
+
     db.commit()
     db.refresh(timer)
     return timer
